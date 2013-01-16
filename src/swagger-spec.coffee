@@ -314,3 +314,164 @@ describe 'Crud Methods', ->
 
      runs ->
        expect(response).toBeDefined()
+
+describe 'Authorization', ->
+  beforeEach ->
+    window.fakeGetJSON = (response) ->
+      spyOn(jQuery, 'getJSON').andCallFake( (url, callback)->
+        callback(response)
+        error: (x) ->
+      )
+    window.wordnik = new SwaggerApi({discoveryUrl: 'http://w00t'})
+
+  it 'must be present in the resources level', ->
+    globalAuthorize =
+      authorization:
+        type: 'oauth2'
+        authorizeEndpoint: '/authorize'
+        scope: 'ALL'
+      apis: [
+        path: '/book'
+        operations: [
+          httpMethod: 'GET'
+          nickname: 'book'
+          parameters: []
+        ]
+      ]
+
+    fakeGetJSON(globalAuthorize)
+    wordnik.build()
+
+    waitsFor ->
+      wordnik.ready?
+
+    runs ->
+      expect(jQuery.getJSON).toHaveBeenCalled()
+      expect(wordnik.authorization).toBeDefined()
+      expect(wordnik.resources.book.authorization).toBeDefined()
+      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+  
+  it 'must be present in the apis level', ->
+    apiAuthorize =
+      nickname: 'getBook'
+      apis: [
+        path: '/book'
+        authorization:
+          type: 'oauth2'
+          authorizeEndpoint: '/authorize'
+          scope: 'ALL'
+        operations: [
+          httpMethod: 'GET'
+          nickname: 'book'
+          parameters: []
+        ]
+      ]
+    
+    fakeGetJSON(apiAuthorize)
+    wordnik.build()
+
+    waitsFor ->
+      wordnik.ready?
+
+    runs ->
+      expect(jQuery.getJSON).toHaveBeenCalled()
+      expect(wordnik.resources.book.authorization).toBeDefined()
+      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+  
+  it 'must be present in the operations level', ->
+      
+    operationAuthorize =
+      nickname: 'getBook'
+      apis: [
+        path: '/book'
+        operations: [
+          authorization:
+            type: 'oauth2'
+            authorizeEndpoint: '/authorize'
+            scope: 'ALL'
+          httpMethod: 'GET'
+          nickname: 'book'
+          parameters: []
+        ]
+      ]
+    
+    fakeGetJSON(operationAuthorize)
+    wordnik.build()
+
+    waitsFor ->
+      wordnik.ready?
+
+    runs ->
+      expect(jQuery.getJSON).toHaveBeenCalled()
+      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+  
+  it 'inherits from all the levels', ->
+    
+    authorizeInheritance =
+      nickname: 'getBook'
+      authorization:
+        type: 'oauth2'
+        authorizeEndpoint: '/authorize'
+        scope: 'ALL'
+      apis: [
+        path: '/book'
+        authorization:
+          authorizeEndpoint: '/authorize2'
+          scope: 'ALL'
+        operations: [
+          authorization:
+            scope: 'SOME'
+          httpMethod: 'GET'
+          nickname: 'book'
+          parameters: []
+        ]
+      ]
+    
+    fakeGetJSON(authorizeInheritance)
+    wordnik.build()
+    
+    waitsFor ->
+      wordnik.ready?
+
+    runs ->
+      expect(jQuery.getJSON).toHaveBeenCalled()
+      expect(wordnik.authorization).toEqual(
+        type: 'oauth2'
+        authorizeEndpoint: '/authorize'
+        scope: 'ALL'
+      )
+      expect(wordnik.resources.book.authorization).toEqual(
+        type: 'oauth2'
+        authorizeEndpoint: '/authorize2' 
+        scope: 'ALL'
+      )
+      expect(wordnik.resources.book.operations.book.authorization).toEqual(
+        type: 'oauth2'
+        authorizeEndpoint: '/authorize2'
+        scope: 'SOME'
+      )
+  
+  it 'must not be present if not in resources, apis or operations', ->
+  
+    noAuthorize =
+      apis: [
+        path: '/book'
+        nickname: 'getBook'
+        operations: [
+          httpMethod: 'GET'
+          nickname: 'book'
+          parameters: []
+        ]
+      ]
+    
+    fakeGetJSON(noAuthorize)
+    wordnik.build()
+
+    waitsFor ->
+      wordnik.ready?
+
+    runs ->
+      expect(jQuery.getJSON).toHaveBeenCalled()
+      expect(wordnik.authorization).not.toBeDefined()
+
+
