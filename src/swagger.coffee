@@ -43,7 +43,7 @@ class SwaggerApi
         else
           # The base path derived from discoveryUrl
           @basePath = @discoveryUrl.substring(0, @discoveryUrl.lastIndexOf('/'))
-          log 'derived basepath from discoveryUrl as ' + @basePath
+          console.log 'derived basepath from discoveryUrl as ' + @basePath
 
         @resources = {}
         @resourcesArray = []
