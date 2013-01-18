@@ -348,8 +348,8 @@ describe 'Authorization', ->
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
       expect(wordnik.authorization).toBeDefined()
-      expect(wordnik.resources.book.authorization).not.toBeDefined()
-      expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
+      expect(wordnik.resources.book.authorization).toBeDefined()
+      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
   
   it 'must not be present in the apis level', ->
     apiAuthorize =
@@ -378,7 +378,7 @@ describe 'Authorization', ->
       expect(wordnik.resources.book.authorization).not.toBeDefined()
       expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
   
-  it 'must be present in the operations level', ->
+  it 'must not be present in the operations level', ->
       
     operationAuthorize =
       nickname: 'getBook'
@@ -405,7 +405,7 @@ describe 'Authorization', ->
       expect(jQuery.getJSON).toHaveBeenCalled()
       expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
   
-  it 'does not inherit from all the levels', ->
+  it 'does inherit top level', ->
     
     authorizeInheritance =
       nickname: 'getBook'
@@ -440,18 +440,18 @@ describe 'Authorization', ->
         authorizeEndpoint: '/authorize'
         scope: 'ALL'
       )
-      expect(wordnik.resources.book.authorization).not.toEqual(
+      expect(wordnik.resources.book.authorization).toEqual(
         type: 'oauth2'
-        authorizeEndpoint: '/authorize2' 
+        authorizeEndpoint: '/authorize'
         scope: 'ALL'
       )
-      expect(wordnik.resources.book.operations.book.authorization).not.toEqual(
+      expect(wordnik.resources.book.operations.book.authorization).toEqual(
         type: 'oauth2'
-        authorizeEndpoint: '/authorize2'
-        scope: 'SOME'
+        authorizeEndpoint: '/authorize'
+        scope: 'ALL'
       )
   
-  it 'must not be present if not in resources, apis or operations', ->
+  it 'must not be present if not in the root element', ->
   
     noAuthorize =
       apis: [

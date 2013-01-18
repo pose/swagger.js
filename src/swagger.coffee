@@ -155,6 +155,9 @@ class SwaggerResource
     @modelsArray = []
     @models = {}
 
+    # Inherit the authorization config
+    @authorization = @api.authorization
+
     if resourceObj.operations? and @api.resourcePath?
       # read resource directly from operations object
       @api.progress 'reading resource ' + @name + ' models and operations'
@@ -366,6 +369,8 @@ class SwaggerOperation
     # getDefinitions() maps to getDefinitionsData.do()
     @resource[@nickname]= (args, callback, error) =>
       @do(args, callback, error)
+
+    @authorization = @resource.authorization
 
   isListType: (dataType) ->
     if(dataType.indexOf('[') >= 0) then dataType.substring(dataType.indexOf('[') + 1, dataType.indexOf(']')) else undefined
