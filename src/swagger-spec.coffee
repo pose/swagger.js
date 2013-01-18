@@ -324,7 +324,7 @@ describe 'Authorization', ->
       )
     window.wordnik = new SwaggerApi({discoveryUrl: 'http://w00t'})
 
-  it 'must be present in the resources level', ->
+  it 'must not be present in the resources level', ->
     globalAuthorize =
       authorization:
         type: 'oauth2'
@@ -348,10 +348,10 @@ describe 'Authorization', ->
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
       expect(wordnik.authorization).toBeDefined()
-      expect(wordnik.resources.book.authorization).toBeDefined()
-      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+      expect(wordnik.resources.book.authorization).not.toBeDefined()
+      expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
   
-  it 'must be present in the apis level', ->
+  it 'must not be present in the apis level', ->
     apiAuthorize =
       nickname: 'getBook'
       apis: [
@@ -375,8 +375,8 @@ describe 'Authorization', ->
 
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
-      expect(wordnik.resources.book.authorization).toBeDefined()
-      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+      expect(wordnik.resources.book.authorization).not.toBeDefined()
+      expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
   
   it 'must be present in the operations level', ->
       
@@ -403,9 +403,9 @@ describe 'Authorization', ->
 
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
-      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+      expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
   
-  it 'inherits from all the levels', ->
+  it 'does not inherit from all the levels', ->
     
     authorizeInheritance =
       nickname: 'getBook'
@@ -440,12 +440,12 @@ describe 'Authorization', ->
         authorizeEndpoint: '/authorize'
         scope: 'ALL'
       )
-      expect(wordnik.resources.book.authorization).toEqual(
+      expect(wordnik.resources.book.authorization).not.toEqual(
         type: 'oauth2'
         authorizeEndpoint: '/authorize2' 
         scope: 'ALL'
       )
-      expect(wordnik.resources.book.operations.book.authorization).toEqual(
+      expect(wordnik.resources.book.operations.book.authorization).not.toEqual(
         type: 'oauth2'
         authorizeEndpoint: '/authorize2'
         scope: 'SOME'

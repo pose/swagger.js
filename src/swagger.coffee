@@ -155,15 +155,6 @@ class SwaggerResource
     @modelsArray = []
     @models = {}
 
-    # Merge global with local authorization
-    if @api.authorization?
-      @authorization = {}
-      (@authorization[key] = value) for key, value of @api.authorization
-
-    if resourceObj.authorization?
-      @authorization ?= {}
-      (@authorization[key] = value) for key, value of resourceObj.authorization
-
     if resourceObj.operations? and @api.resourcePath?
       # read resource directly from operations object
       @api.progress 'reading resource ' + @name + ' models and operations'
@@ -229,8 +220,7 @@ class SwaggerResource
   addOperations: (resource_path, ops) ->
     if ops
       for o in ops
-        op = new SwaggerOperation o.nickname, resource_path, o.httpMethod, o.parameters, o.summary, o.notes, o.responseClass, o.errorResponses, this, o.supportedContentTypes,
-          o.authorization
+        op = new SwaggerOperation o.nickname, resource_path, o.httpMethod, o.parameters, o.summary, o.notes, o.responseClass, o.errorResponses, this, o.supportedContentTypes
         @operations[op.nickname] = op
         @operationsArray.push op
 
@@ -324,7 +314,7 @@ class SwaggerModelProperty
 
 class SwaggerOperation
 
-  constructor: (@nickname, @path, @httpMethod, @parameters=[], @summary, @notes, @responseClass, @errorResponses, @resource, @supportedContentTypes, @authorization) ->
+  constructor: (@nickname, @path, @httpMethod, @parameters=[], @summary, @notes, @responseClass, @errorResponses, @resource, @supportedContentTypes) ->
     @resource.api.fail "SwaggerOperations must have a nickname." unless @nickname?
     @resource.api.fail "SwaggerOperation #{nickname} is missing path." unless @path?
     @resource.api.fail "SwaggerOperation #{nickname} is missing httpMethod." unless @httpMethod?
@@ -376,11 +366,6 @@ class SwaggerOperation
     # getDefinitions() maps to getDefinitionsData.do()
     @resource[@nickname]= (args, callback, error) =>
       @do(args, callback, error)
-
-    # Merge global with local authorization
-    if @resource.authorization?
-      @authorization ?= {}
-      (@authorization[key] = value) for key, value of @resource.authorization when not @authorization[key]?
 
   isListType: (dataType) ->
     if(dataType.indexOf('[') >= 0) then dataType.substring(dataType.indexOf('[') + 1, dataType.indexOf(']')) else undefined
