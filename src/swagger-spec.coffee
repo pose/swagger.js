@@ -68,9 +68,9 @@ describe 'SwaggerApi', ->
 
       it "creates a container object for its resources, with resource names as keys", ->
         runs ->
-          expect(wordnik.resources).toBeDefined()
-          expect(wordnik.resourcesArray).toBeDefined()
-          expect(wordnik.resources.pet).toBeDefined()
+          expect(wordnik.apis).toBeDefined()
+          expect(wordnik.apis).toBeDefined()
+          expect(wordnik.apis.pet).toBeDefined()
           
       it "creates shorthand references to its resources", ->
         runs ->
@@ -86,9 +86,9 @@ describe 'SwaggerApi', ->
 
       it "creates a container object for its resource, with resource name as keys", ->
         runs ->
-          expect(wordnik.resources).toBeDefined()
-          expect(wordnik.resourcesArray).toBeDefined()
-          expect(wordnik.resources.pet).toBeDefined()
+          expect(wordnik.apis).toBeDefined()
+          expect(wordnik.apis).toBeDefined()
+          expect(wordnik.apis.pet).toBeDefined()
 
       it "creates shorthand references to its resource", ->
         runs ->
@@ -104,7 +104,7 @@ describe 'SwaggerResource', ->
 
   it "creates a url property", ->
     runs ->
-      resource = wordnik.resources.pet
+      resource = wordnik.apis.pet
       expect(resource.url).toMatch(/\.json/)
       
   it "has a name property which is inferred from its path", ->
@@ -135,7 +135,7 @@ describe 'SwaggerOperation', ->
   describe "urlify", ->
 
     beforeEach ->
-      window.operation = wordnik.resources.pet.operations.getPetById
+      window.operation = wordnik.apis.pet.operations.getPetById
       operation.path = "/my.{format}/{foo}/kaboo"
       operation.parameters = [{paramType: 'path', name: 'foo'}]
       window.args = {foo: 'pee'}
@@ -348,8 +348,8 @@ describe 'Authorization', ->
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
       expect(wordnik.authorization).toBeDefined()
-      expect(wordnik.resources.book.authorization).toBeDefined()
-      expect(wordnik.resources.book.operations.book.authorization).toBeDefined()
+      expect(wordnik.apis.book.authorization).toBeDefined()
+      expect(wordnik.apis.book.operations.book.authorization).toBeDefined()
   
   it 'must not be present in the apis level', ->
     apiAuthorize =
@@ -375,8 +375,8 @@ describe 'Authorization', ->
 
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
-      expect(wordnik.resources.book.authorization).not.toBeDefined()
-      expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
+      expect(wordnik.apis.book.authorization).not.toBeDefined()
+      expect(wordnik.apis.book.operations.book.authorization).not.toBeDefined()
   
   it 'must not be present in the operations level', ->
       
@@ -403,7 +403,7 @@ describe 'Authorization', ->
 
     runs ->
       expect(jQuery.getJSON).toHaveBeenCalled()
-      expect(wordnik.resources.book.operations.book.authorization).not.toBeDefined()
+      expect(wordnik.apis.book.operations.book.authorization).not.toBeDefined()
   
   it 'does inherit top level', ->
     
@@ -440,12 +440,12 @@ describe 'Authorization', ->
         authorizeEndpoint: '/authorize'
         scope: 'ALL'
       )
-      expect(wordnik.resources.book.authorization).toEqual(
+      expect(wordnik.apis.book.authorization).toEqual(
         type: 'oauth2'
         authorizeEndpoint: '/authorize'
         scope: 'ALL'
       )
-      expect(wordnik.resources.book.operations.book.authorization).toEqual(
+      expect(wordnik.apis.book.operations.book.authorization).toEqual(
         type: 'oauth2'
         authorizeEndpoint: '/authorize'
         scope: 'ALL'

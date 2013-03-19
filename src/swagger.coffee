@@ -45,13 +45,13 @@ class SwaggerApi
           @basePath = @discoveryUrl.substring(0, @discoveryUrl.lastIndexOf('/'))
           console.log 'derived basepath from discoveryUrl as ' + @basePath
 
-        @resources = {}
-        @resourcesArray = []
+        @apis = {}
+        @apisArray = []
         
         # Fetch global authorization data
         @authorization = response.authorization if response.authorization?
 
-        # If this response contains resourcePath, all the resources in response belong to one single path
+        # If this response contains resourcePath, all the apis in response belong to one single path
         if response.resourcePath?
           # set the resourcePath
           @resourcePath = response.resourcePath
@@ -64,34 +64,41 @@ class SwaggerApi
             else
               res.addOperations(resource.path, resource.operations)
 
-          # if there are some resources
+          # if there are some apis
           if res?
-            @resources[res.name] = res
-            @resourcesArray.push res
+            @apis[res.name] = res
+            @apisArray.push res
             # Mark as ready
             res.ready = true
 
             # Now that this resource is loaded, tell the API to check in on itself
             @selfReflect()
         else
-          # Store a Array of resources and a map of resources by name
+          # Store a Array of apis and a map of apis by name
           for resource in response.apis
             res = new SwaggerResource resource, this
-            @resources[res.name] = res
-            @resourcesArray.push res
+            @apis[res.name] = res
+            @apisArray.push res
 
         this
 
     ).error(
       (error) =>
-        @fail error.status + ' : ' + error.statusText + ' ' + @discoveryUrl
+        if @discoveryUrl.substring(0, 4) isnt 'http'
+          @fail 'Please specify the protocol for ' + @discoveryUrl
+        else if error.status == 0
+          @fail 'Can\'t read from server.  It may not have the appropriate access-control-origin settings.'
+        else if error.status == 404
+          @fail 'Can\'t read swagger JSON from '  + @discoveryUrl
+        else
+          @fail error.status + ' : ' + error.statusText + ' ' + @discoveryUrl
     )
 
   # This method is called each time a child resource finishes loading
   # 
   selfReflect: ->
-    return false unless @resources?
-    for resource_name, resource of @resources
+    return false unless @apis?
+    for resource_name, resource of @apis
       return false unless resource.ready?
 
     @setConsolidatedModels()
@@ -102,11 +109,11 @@ class SwaggerApi
     @failure message
     throw message
 
-  # parses models in all resources and sets a unique consolidated list of models
+  # parses models in all apis and sets a unique consolidated list of models
   setConsolidatedModels: ->
     @modelsArray = []
     @models = {}
-    for resource_name, resource of @resources
+    for resource_name, resource of @apis
       for modelName of resource.models
         if not @models[modelName]?
           @models[modelName] = resource.models[modelName]
@@ -124,7 +131,7 @@ class SwaggerApi
       url
 
   help: ->
-    for resource_name, resource of @resources
+    for resource_name, resource of @apis
       console.log resource_name
       for operation_name, operation of resource.operations
         console.log "  #{operation.nickname}"
@@ -205,9 +212,8 @@ class SwaggerResource
           @api.selfReflect()
         ).error(
         (error) =>
-          @api.fail error.status + ' : ' + error.statusText + ' ' + @url
+          @api.fail "Unable to read api '" + @name + "' from path " + @url + " (server returned " + error.statusText + ")"
         )
-
 
   addModels: (models) ->
     if models?
@@ -223,7 +229,13 @@ class SwaggerResource
   addOperations: (resource_path, ops) ->
     if ops
       for o in ops
-        op = new SwaggerOperation o.nickname, resource_path, o.httpMethod, o.parameters, o.summary, o.notes, o.responseClass, o.errorResponses, this, o.supportedContentTypes
+        consumes = o.consumes
+
+        # support old naming
+        if o.supportedContentTypes
+          consumes = o.supportedContentTypes
+
+        op = new SwaggerOperation o.nickname, resource_path, o.httpMethod, o.parameters, o.summary, o.notes, o.responseClass, o.errorResponses, this, o.consumes, o.produces
         @operations[op.nickname] = op
         @operationsArray.push op
 
@@ -251,27 +263,29 @@ class SwaggerModel
       else if prop.refDataType? and allModels[prop.refDataType]?
         prop.refModel = allModels[prop.refDataType]
 
-  getMockSignature: (prefix, modelToIgnore) ->
+  getMockSignature: (modelsToIgnore) ->
     propertiesStr = []
     for prop in @properties
       propertiesStr.push prop.toString()
 
-    strong = '<span style="font-weight: bold; color: #000; font-size: 1.0em">';
-    stronger = '<span style="font-weight: bold; color: #000; font-size: 1.1em">';
+    strong = '<span class="strong">';
+    stronger = '<span class="stronger">';
     strongClose = '</span>';
-    classOpen = strong + 'class ' + @name + '(' + strongClose
-    classClose = strong + ')' + strongClose
-    returnVal = classOpen + '<span>' + propertiesStr.join('</span>, <span>') + '</span>' + classClose
+    classOpen = strong + @name + ' {' + strongClose
+    classClose = strong + '}' + strongClose
+    returnVal = classOpen + '<div>' + propertiesStr.join(',</div><div>') + '</div>' + classClose
 
-    if prefix?
-      returnVal = stronger + prefix + strongClose + '<br/>' + returnVal
+    # create the array if necessary and then add the current element
+    if !modelsToIgnore
+      modelsToIgnore = []
+    modelsToIgnore.push(@)
 
-    # iterate thru all properties and add models
-    # which are not modelToIgnore
-    # modelToIgnore is used to ensure that recursive references do not lead to endless loop
+    # iterate thru all properties and add models which are not in modelsToIgnore
+    # modelsToIgnore is used to ensure that recursive references do not lead to endless loop
+    # and that the same model is not displayed multiple times
     for prop in @properties
-      if(prop.refModel? and (not (prop.refModel is modelToIgnore)))
-        returnVal = returnVal + ('<br>' + prop.refModel.getMockSignature(undefined, @))
+      if(prop.refModel? and (modelsToIgnore.indexOf(prop.refModel)) == -1)
+        returnVal = returnVal + ('<br>' + prop.refModel.getMockSignature(modelsToIgnore))
 
     returnVal
 
@@ -284,8 +298,10 @@ class SwaggerModel
 class SwaggerModelProperty
   constructor: (@name, obj) ->
     @dataType = obj.type
-    @isArray = @dataType.toLowerCase() is 'array'
+    @isArray = @dataType && @dataType.toLowerCase() is 'array'
     @descr = obj.description
+    @required = obj.required
+
     if obj.items?
       if obj.items.type? then @refDataType = obj.items.type
       if obj.items.$ref? then @refDataType = obj.items.$ref
@@ -307,17 +323,25 @@ class SwaggerModelProperty
     if @isArray then [result] else result
 
   toString: ->
-    str = @name + ': ' + @dataTypeWithRef
+    req = if @required then 'propReq' else 'propOpt'
+
+    str = '<span class="propName ' + req + '">' + @name + '</span> (<span class="propType">' + @dataTypeWithRef + '</span>';
+    if !@required
+      str += ', <span class="propOptKey">optional</span>'
+
+    str += ')';
     if @values?
-      str += " = ['" + @values.join("' or '") + "']"
+      str += " = <span class='propVals'>['" + @values.join("' or '") + "']</span>"
+
     if @descr?
-      str += ' {' + @descr + '}'
+      str += ': <span class="propDesc">' + @descr + '</span>'
+
     str
 
 
 class SwaggerOperation
 
-  constructor: (@nickname, @path, @httpMethod, @parameters=[], @summary, @notes, @responseClass, @errorResponses, @resource, @supportedContentTypes) ->
+  constructor: (@nickname, @path, @httpMethod, @parameters=[], @summary, @notes, @responseClass, @errorResponses, @resource, @consumes, @produces) ->
     @resource.api.fail "SwaggerOperations must have a nickname." unless @nickname?
     @resource.api.fail "SwaggerOperation #{nickname} is missing path." unless @path?
     @resource.api.fail "SwaggerOperation #{nickname} is missing httpMethod." unless @httpMethod?
@@ -382,7 +406,7 @@ class SwaggerOperation
     # set flag which says if its primitive or not
     isPrimitive = if ((listType? and models[listType]) or models[dataType]?) then false else true
 
-    if (isPrimitive) then dataType else (if listType? then models[listType].getMockSignature(dataType) else models[dataType].getMockSignature(dataType))
+    if (isPrimitive) then dataType else (if listType? then models[listType].getMockSignature() else models[dataType].getMockSignature())
 
   getSampleJSON: (dataType, models) ->
     # set listType if it exists
