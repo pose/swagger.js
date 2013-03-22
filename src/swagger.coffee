@@ -43,10 +43,13 @@ class SwaggerApi
         else
           # The base path derived from discoveryUrl
           @basePath = @discoveryUrl.substring(0, @discoveryUrl.lastIndexOf('/'))
-          log 'derived basepath from discoveryUrl as ' + @basePath
+          console.log 'derived basepath from discoveryUrl as ' + @basePath
 
         @apis = {}
         @apisArray = []
+        
+        # Fetch global authorization data
+        @authorization = response.authorization if response.authorization?
 
         # If this response contains resourcePath, all the apis in response belong to one single path
         if response.resourcePath?
@@ -158,6 +161,9 @@ class SwaggerResource
     # We're going to store models in a map (models) and a list (modelsArray)
     @modelsArray = []
     @models = {}
+
+    # Inherit the authorization config
+    @authorization = @api.authorization
 
     if resourceObj.operations? and @api.resourcePath?
       # read resource directly from operations object
@@ -388,11 +394,12 @@ class SwaggerOperation
             else
               parameter.allowableValues.descriptiveValues.push {value: v, isDefault: false}
 
-
     # Store a named reference to this operation on the parent resource
     # getDefinitions() maps to getDefinitionsData.do()
     @resource[@nickname]= (args, callback, error) =>
       @do(args, callback, error)
+
+    @authorization = @resource.authorization
 
   isListType: (dataType) ->
     if(dataType.indexOf('[') >= 0) then dataType.substring(dataType.indexOf('[') + 1, dataType.indexOf(']')) else undefined
